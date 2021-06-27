@@ -224,7 +224,7 @@ function mycred_raypay_plugin() {
                         'timeout' => 15,
                     );
 
-                    $response = $this->call_gateway_endpoint( 'http://185.165.118.211:14000/raypay/api/v1/Payment/checkInvoice?pInvoiceID=' . $invoice_id, $args );
+                    $response = $this->call_gateway_endpoint( 'https://api.raypay.ir/raypay/api/v1/Payment/checkInvoice?pInvoiceID=' . $invoice_id, $args );
                     if ( is_wp_error( $response ) ) {
                         $log = $response->get_error_message();
                         $this->log_call( $pending_post_id, $log );
@@ -401,7 +401,7 @@ function mycred_raypay_plugin() {
                         'headers' => $headers,
                         'timeout' => 15,
                     );
-                    $response = $this->call_gateway_endpoint('http://185.165.118.211:14000/raypay/api/v1/Payment/getPaymentTokenWithUserID', $args);
+                    $response = $this->call_gateway_endpoint('https://api.raypay.ir/raypay/api/v1/Payment/getPaymentTokenWithUserID', $args);
                     if (is_wp_error($response)) {
                         $error = $response->get_error_message();
                         $mycred->add_to_log(
