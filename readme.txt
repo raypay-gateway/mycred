@@ -17,5 +17,5 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 A complete documentation for installing this plugin is available [here](https://raypay.ir/Plugins).
 
 == Changelog ==
-= 1.0, May 14, 2021 =
+= 1.0, May 14, 2019 =
 * First Release.

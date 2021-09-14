@@ -54,7 +54,11 @@ msgid "User ID"
 msgstr ""
 
 #: class-mycred-gateway-raypay.php:105
-msgid "Acceptor Code"
+msgid "Marketing ID"
+msgstr ""
+
+#: class-mycred-gateway-raypay.php:105
+msgid "Sandbox"
 msgstr ""
 
 #: class-mycred-gateway-raypay.php:243

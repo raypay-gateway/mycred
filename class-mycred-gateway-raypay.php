@@ -79,7 +79,8 @@ function mycred_raypay_plugin() {
                     'gateway_logo_url'  => plugins_url( '/assets/logo.svg', __FILE__ ),
                     'defaults'          => [
                         'user_id'            => '20064',
-                        'acceptor_code'            => '220000000003751',
+                        'marketing_id'            => '10070',
+                        'sandbox'            => FALSE,
                         'raypay_display_name' => __( 'RayPay payment gateway', 'mycred-raypay-gateway' ),
                         'currency'           => 'rial',
                         'exchange'           => $default_exchange,
@@ -121,15 +122,28 @@ function mycred_raypay_plugin() {
                 </ol>
 
                 <label class="subheader"
-                       for="<?php echo $this->field_id( 'acceptor_code' ); ?>"><?php _e( 'Acceptor Code', 'mycred-raypay-gateway' ); ?></label>
+                       for="<?php echo $this->field_id( 'marketing_id' ); ?>"><?php _e( 'Marketing ID', 'mycred-raypay-gateway' ); ?></label>
                 <ol>
                     <li>
                         <div class="h2">
-                            <input id="<?php echo $this->field_id( 'acceptor_code' ); ?>"
-                                   name="<?php echo $this->field_name( 'acceptor_code' ); ?>"
+                            <input id="<?php echo $this->field_id( 'marketing_id' ); ?>"
+                                   name="<?php echo $this->field_name( 'marketing_id' ); ?>"
                                    type="text"
-                                   value="<?php echo $prefs['acceptor_code']; ?>"
+                                   value="<?php echo $prefs['marketing_id']; ?>"
                                    class="long"/>
+                        </div>
+                    </li>
+                </ol>
+
+                <label class="subheader"
+                       for="<?php echo $this->field_id( 'sandbox' ); ?>"><?php _e( 'Sandbox', 'mycred-raypay-gateway' ); ?></label>
+                <ol>
+                    <li>
+                        <div class="h2">
+                            <input id="<?php echo $this->field_id( 'sandbox' ); ?>"
+                                   name="<?php echo $this->field_name( 'sandbox' ); ?>"
+                                <?php echo $prefs['sandbox'] == "on"? 'checked="checked"' : '' ?>
+                                   type="checkbox"/>
                         </div>
                     </li>
                 </ol>
@@ -183,7 +197,8 @@ function mycred_raypay_plugin() {
 
             public function sanitise_preferences( $data ) {
                 $new_data['user_id']            = sanitize_text_field( $data['user_id'] );
-                $new_data['acceptor_code']            = sanitize_text_field( $data['acceptor_code'] );
+                $new_data['marketing_id']            = sanitize_text_field( $data['marketing_id'] );
+                $new_data['sandbox']            = sanitize_text_field( $data['sandbox'] );
                 $new_data['raypay_display_name'] = sanitize_text_field( $data['raypay_display_name'] );
                 $new_data['currency']           = sanitize_text_field( $data['currency'] );
                 $new_data['item_name']          = sanitize_text_field( $data['item_name'] );
@@ -204,27 +219,24 @@ function mycred_raypay_plugin() {
             public function process() {
 
                 $pending_post_id = sanitize_text_field( $_REQUEST['payment_id'] );
+                $id = !empty($_POST['invoiceid'])  ? sanitize_text_field($_POST['invoiceid']) : NULL;
                 $org_pending_payment = $pending_payment = $this->get_pending_payment( $pending_post_id );
                 $mycred = mycred( $org_pending_payment->point_type );
-                $invoice_id = sanitize_text_field( $_REQUEST['?invoiceID'] );
 
-                if ( $invoice_id ) {
+                if ( $pending_post_id ) {
 
-                    $data = array(
-                        'order_id' => '',
-                    );
 
                     $headers = array(
                         'Content-Type' => 'application/json',
                     );
 
                     $args = array(
-                        'body' => json_encode($data),
+                        'body' => json_encode($_POST),
                         'headers' => $headers,
                         'timeout' => 15,
                     );
 
-                    $response = $this->call_gateway_endpoint( 'https://api.raypay.ir/raypay/api/v1/Payment/checkInvoice?pInvoiceID=' . $invoice_id, $args );
+                    $response = $this->call_gateway_endpoint( 'https://api.raypay.ir/raypay/api/v1/Payment/verify', $args );
                     if ( is_wp_error( $response ) ) {
                         $log = $response->get_error_message();
                         $this->log_call( $pending_post_id, $log );
@@ -260,15 +272,18 @@ function mycred_raypay_plugin() {
                         exit;
                     }
 
-                    $state = $result->Data->State;
+                    $state = $result->Data->Status;
+                    $verify_invoice_id=$result->Data->invoiceID;
+
 
                     if ( $state === 1) {
                         $message =  __( 'Payment succeeded.', 'mycred-raypay-gateway');
                         add_filter( 'mycred_run_this', function( $filter_args ) use ( $message ) {
                             return $this->mycred_raypay_success_log( $filter_args, $message );
                         } );
+                        //$this->prefs['sandbox'] == "on") ||
 
-                        if (  $this->complete_payment( $org_pending_payment , $invoice_id ) ) {
+                        if ( $this->prefs['sandbox'] == "on" || $this->complete_payment( $org_pending_payment , $id ) ) {
 
 
                             $this->log_call( $pending_post_id, $message );
@@ -377,11 +392,10 @@ function mycred_raypay_plugin() {
 
                     $is_ajax = (isset($_REQUEST['ajax']) && $_REQUEST['ajax'] == 1) ? true : false;
                     $callback = add_query_arg('payment_id', $this->transaction_id, $this->callback_url());
-                    $callback .= "&";
                     $user_id = $this->prefs['user_id'];
-                    $acceptor_code = $this->prefs['acceptor_code'];
+                    $marketing_id = $this->prefs['marketing_id'];
+                    $sandbox = ($this->prefs['sandbox'] == "on") ? true: false;
                     $invoice_id = round(microtime(true) * 1000);
-
 
                     $data = array(
                         'amount' => strval($amount),
@@ -389,7 +403,8 @@ function mycred_raypay_plugin() {
                         'userID' => $user_id,
                         'redirectUrl' => $callback,
                         'factorNumber' => strval($this->transaction_id),
-                        'acceptorCode' => $acceptor_code,
+                        'marketingID' => $marketing_id,
+                        'enableSandBox' => $sandbox,
                     );
 
                     $headers = array(
@@ -401,7 +416,7 @@ function mycred_raypay_plugin() {
                         'headers' => $headers,
                         'timeout' => 15,
                     );
-                    $response = $this->call_gateway_endpoint('https://api.raypay.ir/raypay/api/v1/Payment/getPaymentTokenWithUserID', $args);
+                    $response = $this->call_gateway_endpoint('https://api.raypay.ir/raypay/api/v1/Payment/pay', $args);
                     if (is_wp_error($response)) {
                         $error = $response->get_error_message();
                         $mycred->add_to_log(
@@ -447,13 +462,11 @@ function mycred_raypay_plugin() {
 
                         } else if (empty($_GET['raypay_error'])) {
                             wp_redirect($_SERVER['HTTP_ORIGIN'] . $_SERVER['REQUEST_URI'] . '&raypay_error=' . $error);
-                            exit;
                         }
 
                     }
 
-                    $access_token = $result->Data->Accesstoken;
-                    $terminal_id = $result->Data->TerminalID;
+                    $token = $result->Data;
 
                     $item_name = str_replace('%number%', $this->amount, $this->prefs['item_name']);
                     $item_name = $this->core->template_tags_general($item_name);
@@ -500,8 +513,9 @@ function mycred_raypay_plugin() {
                     }
 
                     $this->redirect_fields = $redirect_fields;
-                    $this->mycred_raypay_send_data_shaparak($access_token , $terminal_id);
-                    //$this->redirect_to = empty($_GET['raypay_error']) ? $result->link : $_SERVER['REQUEST_URI'];
+                    $link='https://my.raypay.ir/ipg?token=' . $token;
+                    Header('Location:'.$link);
+                    //$this->redirect_to = empty( $_GET['raypay_error'] )? $link : $_SERVER['REQUEST_URI'];
                 }
 
 
@@ -580,14 +594,6 @@ function mycred_raypay_plugin() {
                     }
                 }
                 return $response;
-            }
-
-            public function mycred_raypay_send_data_shaparak($access_token , $terminal_id){
-                echo '<form name="frmRayPayPayment" method="post" action=" https://mabna.shaparak.ir:8080/Pay ">';
-                echo '<input type="hidden" name="TerminalID" value="' . $terminal_id . '" />';
-                echo '<input type="hidden" name="token" value="' . $access_token . '" />';
-                echo '<input class="submit" type="submit" value="پرداخت" /></form>';
-                echo '<script>document.frmRayPayPayment.submit();</script>';
             }
     }
 }

@@ -6,7 +6,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/mycred-raypay-"
 "gateway\n"
 "POT-Creation-Date: 2019-05-18T12:07:10+00:00\n"
-"PO-Revision-Date: 2021-05-11 14:28+0430\n"
+"PO-Revision-Date: 2021-09-14 08:20+0430\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: fa_IR\n"
@@ -55,8 +55,12 @@ msgid "User ID"
 msgstr "شناسه کاربری"
 
 #: class-mycred-gateway-raypay.php:105
-msgid "Acceptor Code"
-msgstr "کد پذیرنده"
+msgid "Marketing ID"
+msgstr "شناسه کسب و کار"
+
+#: class-mycred-gateway-raypay.php:105
+msgid "Sandbox"
+msgstr "فعالسازی SandBox"
 
 #: class-mycred-gateway-raypay.php:243
 msgid "An error occurred while verifying the transaction."
@@ -77,3 +81,6 @@ msgstr ""
 #: class-mycred-gateway-raypay.php:265 class-mycred-gateway-raypay.php:273
 msgid "Payment failed."
 msgstr "پرداخت با خطا مواجه شده است."
+
+#~ msgid "Acceptor Code"
+#~ msgstr "کد پذیرنده"
